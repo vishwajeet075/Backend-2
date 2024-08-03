@@ -4,14 +4,16 @@
   "description": "This is only for the formdata",
   "main": "app.js",
   "scripts": {
-      "build": "netlify-lambda build functions ",
-      "start": "netlify-lambda serve functions "
+    "build": "netlify-lambda build functions ",
+    "start": "netlify-lambda serve functions "
   },
   "author": "vishwajeet",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7",
     "serverless-http": "^3.2.0",
     "serverless-mysql": "^1.5.5"
   },
