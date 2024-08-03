@@ -3,6 +3,8 @@ const serverless = require('serverless-http');
 const express = require('express');
 const cors = require('cors');
 const serverlessMysql = require('serverless-mysql');
+const fs = require('fs');
+const path = require('path');
 const router = express.Router();
 
 const corsOptions = {
@@ -29,8 +31,7 @@ const mysql = serverlessMysql({
     database: process.env.DB_NAME,
     ssl: {
       rejectUnauthorized: true,
-      // Uncomment and update path if using SSL
-      // ca: fs.readFileSync('/path/to/ca-cert.pem')
+       ca: fs.readFileSync(path.join(__dirname,'..','ca.pem')).toString()
     },
     connectTimeout: 10000,
     acquireTimeout: 10000
