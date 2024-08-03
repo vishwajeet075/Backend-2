@@ -29,12 +29,32 @@ const mysql = serverlessMysql({
     database: process.env.DB_NAME,
     ssl: {
       rejectUnauthorized: true,
-    }
+      // Uncomment and update path if using SSL
+      // ca: fs.readFileSync('/path/to/ca-cert.pem')
+    },
+    connectTimeout: 10000,
+    acquireTimeout: 10000
+  },
+  onConnect: () => {
+    console.log('Connected to MySQL');
+  },
+  pool: {
+    min: 0,
+    max: 5
   }
 });
 
+async function ensureConnection() {
+  try {
+    await mysql.connect();
+  } catch (error) {
+    console.error('Error connecting to database:', error);
+    throw error;
+  }
+}
+
 async function createTable() {
-    console.log('Attempting to create table...');
+  console.log('Attempting to create table...');
   try {
     await mysql.query(`
       CREATE TABLE IF NOT EXISTS contact_mini (
@@ -46,31 +66,9 @@ async function createTable() {
     console.log('Table created or already exists');
   } catch (error) {
     console.error('Error creating table:', error);
+    throw error;
   }
 }
-
-app.post('/submit-form-1',  async (req, res) => {
-    console.log('Received form submission request');
-    console.log('Request body:', req.body);
-    const { name, email, message } = req.body;
-    try {
-        console.log('Ensuring table exists...');
-        await createTable(); // Ensure table exists
-
-        console.log('Inserting data into table...');
-        await mysql.query(
-            'INSERT INTO contact_mini (email, name, message) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = ?, message = ?',
-            [email, name, message, name, message]
-        );
-        console.log('Data inserted successfully');
-        await mysql.end();
-
-        res.json({ success: true, message: 'Form submitted successfully' });
-    } catch (error) {
-        console.error('Error submitting form:', error);
-        res.status(500).json({ success: false, message: 'An error occurred' });
-    }
-});
 
 async function createTable_contact() {
   console.log('Attempting to create table...');
@@ -91,30 +89,53 @@ async function createTable_contact() {
     console.log('Table created or already exists');
   } catch (error) {
     console.error('Error creating table:', error);
+    throw error;
   }
 }
 
-app.post('/submit-contact-form',  async (req, res) => {
+app.post('/submit-form-1', async (req, res) => {
+  console.log('Received form submission request');
+  console.log('Request body:', req.body);
+  const { name, email, message } = req.body;
+  try {
+    await ensureConnection();
+    console.log('Ensuring table exists...');
+    await createTable();
+    console.log('Inserting data into table...');
+    await mysql.query(
+      'INSERT INTO contact_mini (email, name, message) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = ?, message = ?',
+      [email, name, message, name, message]
+    );
+    console.log('Data inserted successfully');
+    res.json({ success: true, message: 'Form submitted successfully' });
+  } catch (error) {
+    console.error('Detailed error:', error.stack);
+    res.status(500).json({ success: false, message: 'An error occurred', error: error.message });
+  } finally {
+    await mysql.end();
+  }
+});
+
+app.post('/submit-contact-form', async (req, res) => {
   console.log('Received form submission request');
   console.log('Request body:', req.body);
   const { name, email, company, designation, city, country, message } = req.body;
-
   try {
+    await ensureConnection();
     console.log('Ensuring table exists...');
-    await createTable_contact(); // Ensure table exists
-
+    await createTable_contact();
     console.log('Inserting data into table...');
     await mysql.query(
       'INSERT INTO Contact (name, email, company, designation, city, country, message) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [name, email, company, designation, city, country, message]
     );
-
     console.log('Data inserted successfully');
-    await mysql.end();
     res.json({ success: true, message: 'Form submitted successfully' });
   } catch (error) {
-    console.error('Error submitting form:', error);
-    res.status(500).json({ success: false, message: 'An error occurred' });
+    console.error('Detailed error:', error.stack);
+    res.status(500).json({ success: false, message: 'An error occurred', error: error.message });
+  } finally {
+    await mysql.end();
   }
 });
 
