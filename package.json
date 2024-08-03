@@ -1,0 +1,21 @@
+{
+  "name": "backend-2",
+  "version": "1.0.0",
+  "description": "This is only for the formdata",
+  "main": "app.js",
+  "scripts": {
+      "build": "netlify-lambda build functions ",
+      "start": "netlify-lambda serve functions "
+  },
+  "author": "vishwajeet",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "serverless-http": "^3.2.0",
+    "serverless-mysql": "^1.5.5"
+  },
+  "devDependencies": {
+    "netlify-lambda": "^2.0.16"
+  }
+}
