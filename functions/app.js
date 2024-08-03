@@ -44,14 +44,22 @@ const mysql = serverlessMysql({
   }
 });
 
+let mysqlConnection = null;
+
 async function ensureConnection() {
-  try {
-    await mysql.connect();
-  } catch (error) {
-    console.error('Error connecting to database:', error);
-    throw error;
+  if (mysqlConnection === null) {
+    try {
+      mysqlConnection = await mysql.connect();
+      console.log('Connected to MySQL');
+    } catch (error) {
+      console.error('Error connecting to database:', error);
+      throw error;
+    }
   }
+  return mysqlConnection;
 }
+
+
 
 async function createTable() {
   console.log('Attempting to create table...');
@@ -94,11 +102,12 @@ async function createTable_contact() {
 }
 
 app.post('/submit-form-1', async (req, res) => {
+    let connection;
   console.log('Received form submission request');
   console.log('Request body:', req.body);
   const { name, email, message } = req.body;
   try {
-    await ensureConnection();
+ connection = await ensureConnection();
     console.log('Ensuring table exists...');
     await createTable();
     console.log('Inserting data into table...');
@@ -110,6 +119,8 @@ app.post('/submit-form-1', async (req, res) => {
     res.json({ success: true, message: 'Form submitted successfully' });
   } catch (error) {
     console.error('Detailed error:', error.stack);
+console.error('Error code:', error.code);
+console.error('Error message:', error.message);
     res.status(500).json({ success: false, message: 'An error occurred', error: error.message });
   } finally {
     await mysql.end();
