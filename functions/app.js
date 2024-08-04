@@ -21,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 console.log('Initializing MySQL connection...');
+console.log(process.env.DATABASE_URL);
 const mysql = serverlessMysql({
   config: process.env.DATABASE_URL,
   onConnect: () => {
