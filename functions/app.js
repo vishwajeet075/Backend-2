@@ -29,12 +29,12 @@ const mysql = serverlessMysql({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     ssl: {
-      rejectUnauthorized: true,
+      rejectUnauthorized: false,
    
       ca: process.env.CA_CERT,
     },
-    connectTimeout: 10000,
-    acquireTimeout: 10000
+    connectTimeout: 30000,
+    acquireTimeout: 30000
   },
   onConnect: () => {
     console.log('Connected to MySQL');
