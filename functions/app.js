@@ -31,7 +31,7 @@ const mysql = serverlessMysql({
     ssl: {
       rejectUnauthorized: true,
    
-      ca: fs.readFileSync(__dirname, 'ca.pem').toString(),
+      ca: fs.readFileSync('./ca.pem').toString(),
     },
     connectTimeout: 10000,
     acquireTimeout: 10000
