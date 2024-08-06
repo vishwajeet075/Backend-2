@@ -24,21 +24,17 @@ app.use(express.json());
 
 
 
-console.log('Initializing MySQL connection...');
-
-// Create a MySQL connection
-const connection = mysql.createConnection({
-    host: process.env.DB_HOST,
+function createConnection() {
+    return mysql.createConnection({
+     host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database:process.env.DB_NAME,
-      port: process.env.DB_PORT
-});
+    database: process.env.DB_NAME
+    });
+}
 
-// Promisify query function for async/await
-const query = util.promisify(connection.query).bind(connection);
-
-async function createTable() {
+async function createTable(connection) {
     console.log('Attempting to create table...');
     const createTableQuery = `
         CREATE TABLE IF NOT EXISTS contact_mini (
@@ -47,6 +43,7 @@ async function createTable() {
             message TEXT NOT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `;
+    const query = util.promisify(connection.query).bind(connection);
     try {
         await query(createTableQuery);
         console.log('Table created or already exists');
@@ -60,10 +57,21 @@ app.post('/submit-form-1', async (req, res) => {
     console.log('Received form submission request');
     console.log('Request body:', req.body);
     const { name, email, message } = req.body;
+    const connection = createConnection();
+    connection.connect((err) => {
+        if (err) {
+            console.error('Error connecting to the database:', err);
+            res.status(500).json({ success: false, message: 'Database connection error' });
+            return;
+        }
+        console.log('Connected to the database');
+    });
+
+    const query = util.promisify(connection.query).bind(connection);
 
     try {
         console.log('Ensuring table exists...');
-        await createTable(); // Ensure table exists
+        await createTable(connection); // Ensure table exists
 
         console.log('Inserting data into table...');
         const insertQuery = `
@@ -78,25 +86,14 @@ app.post('/submit-form-1', async (req, res) => {
     } catch (error) {
         console.error('Error submitting form:', error);
         res.status(500).json({ success: false, message: 'An error occurred' });
-    }
-});
-
-// Handle connection errors
-connection.connect((err) => {
-    if (err) {
-        console.error('Error connecting to the database:', err);
-        return;
-    }
-    console.log('Connected to the database');
-});
-
-connection.on('error', (err) => {
-    console.error('Database error:', err);
-    if (err.code === 'PROTOCOL_CONNECTION_LOST') {
-        // Reconnect logic
-        connection.connect();
-    } else {
-        throw err;
+    } finally {
+        connection.end((err) => {
+            if (err) {
+                console.error('Error ending the database connection:', err);
+            } else {
+                console.log('Database connection closed');
+            }
+        });
     }
 });
 
