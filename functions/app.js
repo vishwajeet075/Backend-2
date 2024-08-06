@@ -2,8 +2,8 @@ console.log('Server starting...');
 const serverless = require('serverless-http');
 const express = require('express');
 const cors = require('cors');
-/*const serverlessMysql = require('serverless-mysql');*/
-const mysql = require('mysql2/promise');
+const serverlessMysql = require('serverless-mysql');
+/*const mysql = require('mysql2/promise');*/
 const fs=require('fs');
 const router = express.Router();
 
