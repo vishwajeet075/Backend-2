@@ -16,7 +16,8 @@
     "mysql2": "^3.11.0",
     "path": "^0.12.7",
     "serverless-http": "^3.2.0",
-    "serverless-mysql": "^1.5.5"
+    "serverless-mysql": "^1.5.5",
+    "util": "^0.12.5"
   },
   "devDependencies": {
     "netlify-lambda": "^2.0.16"
