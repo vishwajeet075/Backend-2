@@ -77,7 +77,7 @@ app.post('/submit-form-1',  async (req, res) => {
     }
 });
 
-async function createTable_contact() {
+/*async function createTable_contact() {
   console.log('Attempting to create table...');
   try {
     await mysql.query(`
@@ -121,7 +121,7 @@ app.post('/submit-contact-form',  async (req, res) => {
     console.error('Error submitting form:', error);
     res.status(500).json({ success: false, message: 'An error occurred' });
   }
-});
+});*/
 
 app.use('/.netlify/functions/app', router);
 
