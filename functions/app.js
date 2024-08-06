@@ -2,7 +2,7 @@ console.log('Server starting...');
 const serverless = require('serverless-http');
 const express = require('express');
 const cors = require('cors');
-const serverlessMysql = require('serverless-mysql');
+const mysql = require('mysql');
 const util = require('util'); 
 
 const fs=require('fs');
@@ -25,18 +25,14 @@ app.use(express.json());
 
 
 console.log('Initializing MySQL connection...');
-const mysql = serverlessMysql({
-  config: {
+
+// Create a MySQL connection
+const connection = mysql.createConnection({
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    ssl: {
-      rejectUnauthorized: true,
-      ca: process.env.CA_CERT
-    }
-  }
+    database:process.env.DB_NAME,
+      port: process.env.DB_PORT
 });
 
 // Promisify query function for async/await
