@@ -20,16 +20,20 @@ app.use(cors(corsOptions));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-console.log('Initializing MySQL connection...');
 
+
+console.log('Initializing MySQL connection...');
 const mysql = serverlessMysql({
- config: {
-    host: process.env.DB_HOST,  
-    port: process.env.DB_PORT,  
+  config: {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    ssl: true
+    ssl: {
+      rejectUnauthorized: true,
+      ca:process.env.CA_CERT
+    }
   },
   pool: {
     min: 0,
@@ -37,51 +41,25 @@ const mysql = serverlessMysql({
   }
 });
 
-async function ensureConnection() {
+async function query(sql, params) {
   try {
     await mysql.connect();
+    const results = await mysql.query(sql, params);
+    await mysql.end();
+    return results;
   } catch (error) {
-    console.error('Error connecting to database:', error);
+    console.error('Database query error:', error);
     throw error;
   }
 }
 
-async function createTable() {
-  console.log('Attempting to create table...');
+async function createTable(tableName, schema) {
+  console.log(`Attempting to create table ${tableName}...`);
   try {
-    await mysql.query(`
-      CREATE TABLE IF NOT EXISTS contact_mini (
-        email VARCHAR(255) PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        message TEXT NOT NULL
-      )
-    `);
-    console.log('Table created or already exists');
+    await query(`CREATE TABLE IF NOT EXISTS ${tableName} ${schema}`);
+    console.log(`Table ${tableName} created or already exists`);
   } catch (error) {
-    console.error('Error creating table:', error);
-    throw error;
-  }
-}
-
-async function createTable_contact() {
-  console.log('Attempting to create table...');
-  try {
-    await mysql.query(`
-      CREATE TABLE IF NOT EXISTS Contact (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        company VARCHAR(255),
-        designation VARCHAR(255),
-        city VARCHAR(255),
-        country VARCHAR(255),
-        message TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('Table created or already exists');
-  } catch (error) {
-    console.error('Error creating table:', error);
+    console.error(`Error creating table ${tableName}:`, error);
     throw error;
   }
 }
@@ -90,22 +68,24 @@ app.post('/submit-form-1', async (req, res) => {
   console.log('Received form submission request');
   console.log('Request body:', req.body);
   const { name, email, message } = req.body;
+  
   try {
-    await ensureConnection();
-    console.log('Ensuring table exists...');
-    await createTable();
-    console.log('Inserting data into table...');
-    await mysql.query(
+    await createTable('contact_mini', `(
+      email VARCHAR(255) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      message TEXT NOT NULL
+    )`);
+    
+    await query(
       'INSERT INTO contact_mini (email, name, message) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = ?, message = ?',
       [email, name, message, name, message]
     );
+    
     console.log('Data inserted successfully');
     res.json({ success: true, message: 'Form submitted successfully' });
   } catch (error) {
     console.error('Detailed error:', error.stack);
     res.status(500).json({ success: false, message: 'An error occurred', error: error.message });
-  } finally {
-    await mysql.end();
   }
 });
 
@@ -113,22 +93,30 @@ app.post('/submit-contact-form', async (req, res) => {
   console.log('Received form submission request');
   console.log('Request body:', req.body);
   const { name, email, company, designation, city, country, message } = req.body;
+  
   try {
-    await ensureConnection();
-    console.log('Ensuring table exists...');
-    await createTable_contact();
-    console.log('Inserting data into table...');
-    await mysql.query(
+    await createTable('Contact', `(
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      company VARCHAR(255),
+      designation VARCHAR(255),
+      city VARCHAR(255),
+      country VARCHAR(255),
+      message TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    
+    await query(
       'INSERT INTO Contact (name, email, company, designation, city, country, message) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [name, email, company, designation, city, country, message]
     );
+    
     console.log('Data inserted successfully');
     res.json({ success: true, message: 'Form submitted successfully' });
   } catch (error) {
     console.error('Detailed error:', error.stack);
     res.status(500).json({ success: false, message: 'An error occurred', error: error.message });
-  } finally {
-    await mysql.end();
   }
 });
 
