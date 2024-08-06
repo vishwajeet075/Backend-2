@@ -2,7 +2,8 @@ console.log('Server starting...');
 const serverless = require('serverless-http');
 const express = require('express');
 const cors = require('cors');
-const serverlessMysql = require('serverless-mysql');
+/*const serverlessMysql = require('serverless-mysql');*/
+const mysql = require('mysql2/promise');
 const fs=require('fs');
 const router = express.Router();
 
@@ -23,40 +24,51 @@ app.use(express.json());
 
 
 console.log('Initializing MySQL connection...');
-const mysql = serverlessMysql({
-  config: {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    ssl: {
-      rejectUnauthorized: true,
-      ca:process.env.CA_CERT
-    }
+
+// Create a connection pool
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  ssl: {
+    rejectUnauthorized: true,
+    ca : process.env.CA_CERT
   },
-  pool: {
-    min: 0,
-    max: 5
-  }
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-async function query(sql, params) {
-  try {
-    await mysql.connect();
-    const results = await mysql.query(sql, params);
-    await mysql.end();
-    return results;
-  } catch (error) {
-    console.error('Database query error:', error);
-    throw error;
+// Function to execute queries with retries
+async function executeQuery(sql, params, maxRetries = 3) {
+  let retries = 0;
+  while (retries < maxRetries) {
+    try {
+      const connection = await pool.getConnection();
+      try {
+        const [results] = await connection.query(sql, params);
+        return results;
+      } finally {
+        connection.release();
+      }
+    } catch (error) {
+      console.error(`Query execution error (attempt ${retries + 1}):`, error);
+      retries++;
+      if (retries >= maxRetries) {
+        throw error;
+      }
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+    }
   }
 }
 
 async function createTable(tableName, schema) {
   console.log(`Attempting to create table ${tableName}...`);
   try {
-    await query(`CREATE TABLE IF NOT EXISTS ${tableName} ${schema}`);
+    await executeQuery(`CREATE TABLE IF NOT EXISTS ${tableName} ${schema}`);
     console.log(`Table ${tableName} created or already exists`);
   } catch (error) {
     console.error(`Error creating table ${tableName}:`, error);
@@ -76,7 +88,7 @@ app.post('/submit-form-1', async (req, res) => {
       message TEXT NOT NULL
     )`);
     
-    await query(
+    await executeQuery(
       'INSERT INTO contact_mini (email, name, message) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = ?, message = ?',
       [email, name, message, name, message]
     );
@@ -84,7 +96,7 @@ app.post('/submit-form-1', async (req, res) => {
     console.log('Data inserted successfully');
     res.json({ success: true, message: 'Form submitted successfully' });
   } catch (error) {
-    console.error('Detailed error:', error.stack);
+    console.error('Detailed error:', error);
     res.status(500).json({ success: false, message: 'An error occurred', error: error.message });
   }
 });
@@ -107,7 +119,7 @@ app.post('/submit-contact-form', async (req, res) => {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
     
-    await query(
+    await executeQuery(
       'INSERT INTO Contact (name, email, company, designation, city, country, message) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [name, email, company, designation, city, country, message]
     );
@@ -115,7 +127,7 @@ app.post('/submit-contact-form', async (req, res) => {
     console.log('Data inserted successfully');
     res.json({ success: true, message: 'Form submitted successfully' });
   } catch (error) {
-    console.error('Detailed error:', error.stack);
+    console.error('Detailed error:', error);
     res.status(500).json({ success: false, message: 'An error occurred', error: error.message });
   }
 });
