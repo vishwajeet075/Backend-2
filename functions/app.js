@@ -38,42 +38,68 @@ const mysql = serverlessMysql({
   }
 });
 
+// Promisify query function for async/await
+const query = util.promisify(connection.query).bind(connection);
+
 async function createTable() {
     console.log('Attempting to create table...');
-  try {
-    await mysql.query(`
-      CREATE TABLE IF NOT EXISTS contact_mini (
-        email VARCHAR(255) PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        message TEXT NOT NULL
-      )
-    `);
-    console.log('Table created or already exists');
-  } catch (error) {
-    console.error('Error creating table:', error);
-  }
+    const createTableQuery = `
+        CREATE TABLE IF NOT EXISTS contact_mini (
+            email VARCHAR(255) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            message TEXT NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `;
+    try {
+        await query(createTableQuery);
+        console.log('Table created or already exists');
+    } catch (error) {
+        console.error('Error creating table:', error);
+        throw error;
+    }
 }
 
-app.post('/submit-form-1',  async (req, res) => {
+app.post('/submit-form-1', async (req, res) => {
     console.log('Received form submission request');
     console.log('Request body:', req.body);
     const { name, email, message } = req.body;
+
     try {
         console.log('Ensuring table exists...');
         await createTable(); // Ensure table exists
 
         console.log('Inserting data into table...');
-        await mysql.query(
-            'INSERT INTO contact_mini (email, name, message) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = ?, message = ?',
-            [email, name, message, name, message]
-        );
+        const insertQuery = `
+            INSERT INTO contact_mini (email, name, message)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE name = VALUES(name), message = VALUES(message)
+        `;
+        await query(insertQuery, [email, name, message]);
         console.log('Data inserted successfully');
-        await mysql.end();
 
         res.json({ success: true, message: 'Form submitted successfully' });
     } catch (error) {
         console.error('Error submitting form:', error);
         res.status(500).json({ success: false, message: 'An error occurred' });
+    }
+});
+
+// Handle connection errors
+connection.connect((err) => {
+    if (err) {
+        console.error('Error connecting to the database:', err);
+        return;
+    }
+    console.log('Connected to the database');
+});
+
+connection.on('error', (err) => {
+    console.error('Database error:', err);
+    if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+        // Reconnect logic
+        connection.connect();
+    } else {
+        throw err;
     }
 });
 
