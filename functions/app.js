@@ -25,43 +25,6 @@ app.use(express.json());
 
 
 
-const pool = mysql.createPool({
-    connectionLimit: 10, // Adjust based on your load
-        host: 'database-1.cla4mw880qcy.ap-south-1.rds.amazonaws.com',   // Replace with your RDS endpoint
-        user: 'admin',       // Replace with your database username
-        password: 'greenovate',   // Replace with your database password
-        database: 'greenovate' // Replace with your database name
-});
-
-pool.query = util.promisify(pool.query); // Promisify for async/await support
-
-app.post('/submit-form-1', async (req, res) => {
-    const { name, email, message } = req.body;
-
-    try {
-        console.log('Ensuring table exists...');
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS contact_mini (
-                email VARCHAR(255) PRIMARY KEY,
-                name VARCHAR(255),
-                message TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
-        console.log('Inserting data into table...');
-        await pool.query(`
-            INSERT INTO contact_mini (email, name, message)
-            VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE name = VALUES(name), message = VALUES(message)
-        `, [email, name, message]);
-
-        res.json({ success: true, message: 'Form submitted successfully' });
-    } catch (error) {
-        console.error('Error submitting form:', error);
-        res.status(500).json({ success: false, message: 'An error occurred' });
-    }
-});
 
 
 
