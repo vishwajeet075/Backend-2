@@ -1,5 +1,6 @@
 console.log('Server starting...');
 const serverless = require('serverless-http');
+const MongoClient = require('mongodb').MongoClient;
 const express = require('express');
 const cors = require('cors');
 
@@ -25,7 +26,33 @@ app.use(express.json());
 
 
 
-const mysql = require('serverless-mysql')({
+const uri = process.env.mongo_url;
+
+app.post('/submit-form-1', async (req, res) => {
+  const { name, email, message } = req.body;
+
+  try {
+    const client = new MongoClient(uri);
+    await client.connect();
+    const database = client.db('Contact_details');
+    const collection = database.collection('contact_mini');
+
+    const doc = { name, email, message };
+    const result = await collection.insertOne(doc);
+    console.log(`A document was inserted with the _id: ${result.insertedId}`);
+
+    res.status(200).json({ success: true, message: 'Form submitted successfully' });
+  } catch (error) {
+    console.error('Error submitting form:', error);
+    res.status(500).json({ success: false, message:   
+ 'An error occurred' });
+  } finally {
+    await client.close();
+  }
+});
+
+
+/*const mysql = require('serverless-mysql')({
   config: {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -75,7 +102,7 @@ app.post('/submit-form-1', async (req, res) => {
       await connection.end();
     }
   }
-});
+});*/
 
 
 /*async function createTable_contact() {
