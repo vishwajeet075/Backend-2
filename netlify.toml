@@ -9,3 +9,6 @@
 
 [functions]
   directory = "functions-build"
+  
+[build.environment]
+NODE_VERSION = "18.20.4"
