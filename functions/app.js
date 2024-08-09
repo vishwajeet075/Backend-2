@@ -2,7 +2,7 @@ console.log('Server starting...');
 const serverless = require('serverless-http');
 const express = require('express');
 const cors = require('cors');
-const mysql = require('mysql');
+const mysql = require('mysql2/promise');
 const util = require('util'); 
 
 const fs=require('fs');
@@ -30,11 +30,11 @@ app.use(express.json());
 
 function createConnection() {
     return mysql.createConnection({
-     host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME
     });
 }
 
@@ -47,9 +47,8 @@ async function createTable(connection) {
             message TEXT NOT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `;
-    const query = util.promisify(connection.query).bind(connection);
     try {
-        await query(createTableQuery);
+        await connection.execute(createTableQuery);
         console.log('Table created or already exists');
     } catch (error) {
         console.error('Error creating table:', error);
@@ -61,21 +60,13 @@ app.post('/submit-form-1', async (req, res) => {
     console.log('Received form submission request');
     console.log('Request body:', req.body);
     const { name, email, message } = req.body;
-    const connection = createConnection();
-    connection.connect((err) => {
-        if (err) {
-            console.error('Error connecting to the database:', err);
-            res.status(500).json({ success: false, message: 'Database connection error' });
-            return;
-        }
-        console.log('Connected to the database');
-    });
 
-    const query = util.promisify(connection.query).bind(connection);
-
+    let connection;
     try {
-        console.log('Ensuring table exists...');
-        await createTable(connection); // Ensure table exists
+        connection = await createConnection();
+        console.log('Connected to the database');
+
+        await createTable(connection);
 
         console.log('Inserting data into table...');
         const insertQuery = `
@@ -83,7 +74,7 @@ app.post('/submit-form-1', async (req, res) => {
             VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE name = VALUES(name), message = VALUES(message)
         `;
-        await query(insertQuery, [email, name, message]);
+        await connection.execute(insertQuery, [email, name, message]);
         console.log('Data inserted successfully');
 
         res.json({ success: true, message: 'Form submitted successfully' });
@@ -91,16 +82,16 @@ app.post('/submit-form-1', async (req, res) => {
         console.error('Error submitting form:', error);
         res.status(500).json({ success: false, message: 'An error occurred' });
     } finally {
-        connection.end((err) => {
-            if (err) {
-                console.error('Error ending the database connection:', err);
-            } else {
+        if (connection) {
+            try {
+                await connection.end();
                 console.log('Database connection closed');
+            } catch (err) {
+                console.error('Error ending the database connection:', err);
             }
-        });
+        }
     }
 });
-
 
 /*async function createTable_contact() {
   console.log('Attempting to create table...');
