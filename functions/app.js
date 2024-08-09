@@ -23,16 +23,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 
-// Function to create a MySQL connection
-function createConnection() {
-    return mysql.createConnection({
-       connectionLimit: 10, // Adjust based on your load
+
+
+const pool = mysql.createPool({
+    connectionLimit: 10, // Adjust based on your load
         host: 'database-1.cla4mw880qcy.ap-south-1.rds.amazonaws.com',   // Replace with your RDS endpoint
         user: 'admin',       // Replace with your database username
         password: 'greenovate',   // Replace with your database password
         database: 'greenovate' // Replace with your database name
-    });
-}
+});
 
 pool.query = util.promisify(pool.query); // Promisify for async/await support
 
