@@ -39,7 +39,7 @@ app.post('/submit-form-1', async (req, res) => {
 
     const doc = { name, email, message };
     const result = await collection.insertOne(doc);
-    console.log(`A document was inserted with the _id: ${result.insertedId}`);
+    console.log('A document was inserted ');
 
     res.status(200).json({ success: true, message: 'Form submitted successfully' });
   } catch (error) {
