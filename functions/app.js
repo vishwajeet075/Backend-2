@@ -28,7 +28,7 @@ app.use(express.json());
 
 
 
-/*function createConnection() {
+function createConnection() {
     return mysql.createConnection({
      host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -99,7 +99,7 @@ app.post('/submit-form-1', async (req, res) => {
             }
         });
     }
-});*/
+});
 
 
 /*async function createTable_contact() {
