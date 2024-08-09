@@ -25,17 +25,18 @@ app.use(express.json());
 
 
 
-
-
 const mysql = require('serverless-mysql')({
   config: {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+    database: process.env.DB_NAME   
+
   }
 });
+
+
 
 const createTableQuery = `
   CREATE TABLE IF NOT EXISTS contact_mini (
@@ -51,41 +52,30 @@ const insertQuery = `
   ON DUPLICATE KEY UPDATE name = VALUES(name), message = VALUES(message)
 `;
 
-exports.handler = async (event, context) => {
+app.post('/submit-form-1', async (req, res) => {
   let connection = null;
-  
+
   try {
-    console.log('Received form submission request');
-    console.log('Request body:', event.body);
-    const { name, email, message } = JSON.parse(event.body);
+    const { name, email, message } = req.body;
 
     connection = await mysql.connect();
-    console.log('Connected to the database');
 
     // Check if table exists and create if needed
     await connection.query(createTableQuery);
 
-    console.log('Inserting data into table...');
     await connection.query(insertQuery, [email, name, message]);
-    console.log('Data inserted successfully');
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true, message: 'Form submitted successfully' })
-    };
+    res.status(200).json({ success: true, message: 'Form submitted successfully' });
   } catch (error) {
     console.error('Error submitting form:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ success: false, message: 'An error occurred' })
-    };
+    res.status(500).json({ success: false, message:   
+ 'An error occurred' });
   } finally {
     if (connection) {
       await connection.end();
-      console.log('Database connection closed');
     }
   }
-};
+});
 
 
 /*async function createTable_contact() {
