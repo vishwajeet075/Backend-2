@@ -1,6 +1,6 @@
 console.log('Server starting...');
 const serverless = require('serverless-http');
-const MongoClient = require('mongodb').MongoClient;
+const { MongoClient } = require('mongodb');
 const express = require('express');
 const cors = require('cors');
 
@@ -26,31 +26,27 @@ app.use(express.json());
 
 
 
+
 const uri = process.env.mongo_url;
+const client = new MongoClient(uri);
 
 app.post('/submit-form-1', async (req, res) => {
   const { name, email, message } = req.body;
-
   try {
-    const client = new MongoClient(uri);
     await client.connect();
     const database = client.db('Contact_details');
     const collection = database.collection('contact_mini');
-
     const doc = { name, email, message };
     const result = await collection.insertOne(doc);
-    console.log('A document was inserted ');
-
+    console.log('A document was inserted');
     res.status(200).json({ success: true, message: 'Form submitted successfully' });
   } catch (error) {
     console.error('Error submitting form:', error);
-    res.status(500).json({ success: false, message:   
- 'An error occurred' });
+    res.status(500).json({ success: false, message: 'An error occurred' });
   } finally {
     await client.close();
   }
 });
-
 
 
 
