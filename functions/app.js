@@ -1,6 +1,5 @@
 console.log('Server starting...');
 const serverless = require('serverless-http');
-/*const { MongoClient } = require('mongodb');*/
 const express = require('express');
 const cors = require('cors');
 const faunadb = require('faunadb');
@@ -38,7 +37,6 @@ app.post('/submit-form-1', async (req, res) => {
         { data: { name, email, message } }
       )
     );
-    console.log("Document Created and Inserted: ", result.ref);
     res.status(200).json({ success: true, message: 'Form submitted successfully' });
   } catch (error) {
     console.error('Error submitting form:', error);
@@ -47,26 +45,23 @@ app.post('/submit-form-1', async (req, res) => {
 });
 
 
-/*const uri = process.env.mongo_url;
-const client = new MongoClient(uri);
 
-app.post('/submit-form-1', async (req, res) => {
-  const { name, email, message } = req.body;
+app.post('/submit-contact-form',  async (req, res) => {
+  const { name, email, company, designation, city, country, message } = req.body;
+
   try {
-    await client.connect();
-    const database = client.db('Contact_details');
-    const collection = database.collection('contact_mini');
-    const doc = { name, email, message };
-    const result = await collection.insertOne(doc);
-    console.log('A document was inserted');
+    const result1 = await client.query(
+      q.Create(
+        q.Collection('Contacts'),
+        { data: { name, email, company, designation, city, country, message } }
+      )
+    );
     res.status(200).json({ success: true, message: 'Form submitted successfully' });
   } catch (error) {
     console.error('Error submitting form:', error);
     res.status(500).json({ success: false, message: 'An error occurred' });
-  } finally {
-    await client.close();
   }
-});*/
+});
 
 
 
