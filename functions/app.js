@@ -9,7 +9,7 @@ const fs=require('fs');
 const router = express.Router();
 
 const corsOptions = {
-  origin: ['https://greenovate.in'],
+  origin: ['https://greenovate.in','https://www.greenovate.in'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
